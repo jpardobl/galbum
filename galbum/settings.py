@@ -26,6 +26,9 @@ TEMPLATE_DEBUG = True
 
 ALLOWED_HOSTS = []
 
+import os
+DYNAMODB_SESSIONS_AWS_ACCESS_KEY_ID = os.environ["AWS_ACCESS_KEY_ID"]
+DYNAMODB_SESSIONS_AWS_SECRET_ACCESS_KEY = os.environ["AWS_SECRET_ACCESS_KEY"]
 
 # Application definition
 
@@ -36,6 +39,7 @@ INSTALLED_APPS = (
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    "core",
 )
 
 MIDDLEWARE_CLASSES = (
