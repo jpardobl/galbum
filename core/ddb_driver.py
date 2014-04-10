@@ -1,64 +1,86 @@
 from core.ddb_schema import Album, ContributorAlbum, Contributor, Mobject
-
-
+from boto.dynamodb import condition
+from boto.dynamodb.exceptions import DynamoDBKeyNotFoundError
+#covered
 def get_contributor_by_username(username):
     return Contributor.get(username)
 
+#covered
 def get_contributors():
-    return Contributor.query()
+    return Contributor.scan({})
 
 
-def add_album_with_contributor(title, contributor):
+#covered
+def add_album_with_contributor(title, username):
     """
     Used when creating the album, as it needs to be related to the creator
     """
-    album = Album()
-    album.title = title
+    album = Album(title=title)    
     album.save()
-    ContributorAlbum(title=title, username=contributor.username).save()
+    ContributorAlbum(slug=album.slug, username=username).save()
     return album    
 
+#covered
 def add_contributor_album(slug, username):
     """
     Used when adding an existent contributor to an existent album
     """
     contrib = Contributor.get(username)
     album = Album.get(slug)
-    ContributorAlbum(slug=album.slugm, username=contrib.username).save()
-
+    ContributorAlbum(slug=album.slug, username=contrib.username).save()
+#covered
 def add_contributor(username):
     """
     Used when adding an existent contributor to an existent album
     """
-    print( "Username: %s" % username)
+    try:
+        get_contributor_by_username(username)
+        raise AttributeError("%s username alredy exists" % username)
+    except DynamoDBKeyNotFoundError:
+        pass
+    
+   # print( "Username: %s" % username)
     contrib = Contributor(username=username)
     contrib.save()
     return contrib
-    
-        
-def delete_album_by_slug(slug):
-    get_album_by_slug(slug).delete()
 
+#covered
 def delete_contributor_by_username(username):
     Contributor.get(username).delete()
-    
-def get_album_by_title(title):
-    return Album.query(title=title)
+    [x.delete() for x in ContributorAlbum.scan({"username": condition.EQ(username)})]
+        
+#covered
+def delete_album_by_slug(slug):
+    """
+    Album deletion can only be done based on slug, thus no conflicts
+    """    
+    album = get_album_by_slug(slug)
+    [x.delete() for x in ContributorAlbum.scan({"slug": condition.EQ(album.slug)})]
+    album.delete()
+        
 
+#covered
+def get_album_by_title(title):
+    gen = Album.scan({"title": condition.EQ(title)})
+    for data in gen: return data
+     
+#covered
 def get_album_by_slug(slug):
     return Album.get(slug)
+#covered
+def delete_album_contributor(username, slug):
+    ContributorAlbum.get(username, slug).delete()
 
-def delete_album_contributor(slug, username):
-    ContributorAlbum.query(slug, username).delete()
-
+#covered
 def get_album_contributors(album):
-    return [Contributor.get(x.username) for x in ContributorAlbum.query(title=album.title)]
+    return [Contributor.get(x.username) for x in ContributorAlbum.scan({"slug": condition.EQ(album.slug)})]
 
-def get_mobjects_by_slug(slug):
-    return Mobject.query(slug=slug)
+
+def get_mobjects_by_title(title):
+    return Mobject.query(title=title)
 
 def get_albums_by_username(username):
     
-    return [Album.get(album.title) for album in ContributorAlbum.query(username=username)]
+    return [Album.get(calbum.slug) for calbum in ContributorAlbum.scan({"username": condition.EQ(username)})]
         
     

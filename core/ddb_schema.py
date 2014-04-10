@@ -17,10 +17,17 @@ class Contributor(DynamoDBModel):
                 "type": "Contributor", 
                 "username": self.username,
                 "url": reverse("resource_contributor", kwargs={"username": self.username, })})
- 
+        
+    def save(self, *args, **kwargs):
+        #TODO COmprobar si es nuevo
+        if is_new:
+            if Contributor.get(self.username):
+                raise AttributeError("Contributor with username %s already exists at the DB" % self.username)
+        super(Contributor, self).save(*args, **kwargs)
+        
 class Album(DynamoDBModel):
     __table__ = u"album"
-    __hash_key__ = u"title"
+    __hash_key__ = u"slug"
     __schema__ = {
         u"title": unicode,
         u"slug": autoincrement_int,        
@@ -42,7 +49,7 @@ class ContributorAlbum(DynamoDBModel):
     __range_key__ = u"slug"
     __schema__ = {
         u"username": unicode,
-        u"slug": unicode,        
+        u"slug": int,        
       }
     @property
     def json(self):
@@ -55,13 +62,52 @@ class ContributorAlbum(DynamoDBModel):
             "username": self.username,
             "url": reverse("resource_contributoralbum", 
                            kwargs={"slug": self.slug, "username": self.username})})
+        
+           
+    def save(self, *args, **kwargs):
+        #TODO COmprobar si es nuevo
+        if is_new:
+            if ContributorAlbum.get(self.username, self.slug):
+                raise AttributeError(
+                    "Contributor with username %s already associated and album with title: %s" % 
+                    (self.username, self.slug))
+        
+        super(ContributorAlbum, self).save(*args, **kwargs)
+        
+class ViewerAlbum(DynamoDBModel):
+    __table__ = u"viewer_album"
+    __hash_key__ = u"username"
+    __range_key__= u"slug"
+    __schema__ = {
+        u"username": unicode,
+        u"slug": int,         
+        }
+    @property
+    def json(self):
+        return self.to_json()
     
+    def to_json(self):
+        return simplejson.dumps({
+            "type": "ViewerAlbum", 
+            "slug": self.slug, 
+            "username": self.username,
+            "url": reverse("resource_vieweralbum", 
+                           kwargs={"slug": self.slug, "username": self.username})})
+    def save(self, *args, **kwargs):
+        #TODO COmprobar si es nuevo
+        if is_new:
+            if ViewerAlbum.get(self.username, self.slug):
+                raise AttributeError(
+                    "Contributor with username %s already associated and album with title: %s" % 
+                    (self.username, self.slug))
+        super(ViewerAlbum, self).save(*args, **kwargs)
+                
 class Mobject(DynamoDBModel):
     __table__ = u"mobject"
     __hash_key__ = u"slug"
     __range_key__ = u"mobjectid"
     __schema__ = {
-        u"slug": unicode,
+        u"slug": int,
         u"mobjectid": autoincrement_int,
         
     }
